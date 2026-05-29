@@ -68,13 +68,13 @@ def load_datasets():
 def preprocess_train(image, label):
     image = tf.cast(image, tf.float32)
     image = data_augmentation(image, training=True)
-    image = tf.keras.applications.densenet.preprocess_input(image)
+    image = tf.keras.applications.mobilenet_v2.preprocess_input(image)
     return image, label
 
 
 def preprocess_eval(image, label):
     image = tf.cast(image, tf.float32)
-    image = tf.keras.applications.densenet.preprocess_input(image)
+    image = tf.keras.applications.mobilenet_v2.preprocess_input(image)
     return image, label
 
 
@@ -92,8 +92,8 @@ def optimize_dataset(train_ds, val_ds, test_ds):
     return train_ds, val_ds, test_ds
 
 
-def build_densenet121(num_classes):
-    base_model = tf.keras.applications.DenseNet121(
+def build_mobilenetv2(num_classes):
+    base_model = tf.keras.applications.MobileNetV2(
         include_top=False,
         weights="imagenet",
         input_shape=(IMG_SIZE[0], IMG_SIZE[1], 3)
@@ -109,7 +109,7 @@ def build_densenet121(num_classes):
     x = layers.Dropout(0.3)(x)
     outputs = layers.Dense(num_classes, activation="softmax")(x)
 
-    model = tf.keras.Model(inputs, outputs, name="DenseNet121_Tomato")
+    model = tf.keras.Model(inputs, outputs, name="MobileNetV2_Tomato")
 
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
@@ -122,16 +122,16 @@ def build_densenet121(num_classes):
 
 def plot_history(history):
     history_df = pd.DataFrame(history.history)
-    history_df.to_csv(RESULT_DIR / "reports" / "densenet121_history.csv", index=False)
+    history_df.to_csv(RESULT_DIR / "reports" / "mobilenetv2_history.csv", index=False)
 
     plt.figure()
     plt.plot(history.history["accuracy"], label="Train Accuracy")
     plt.plot(history.history["val_accuracy"], label="Validation Accuracy")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
-    plt.title("DenseNet121 Accuracy")
+    plt.title("MobileNetV2 Accuracy")
     plt.legend()
-    plt.savefig(RESULT_DIR / "graphs" / "densenet121_accuracy.png")
+    plt.savefig(RESULT_DIR / "graphs" / "mobilenetv2_accuracy.png")
     plt.close()
 
     plt.figure()
@@ -139,9 +139,9 @@ def plot_history(history):
     plt.plot(history.history["val_loss"], label="Validation Loss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.title("DenseNet121 Loss")
+    plt.title("MobileNetV2 Loss")
     plt.legend()
-    plt.savefig(RESULT_DIR / "graphs" / "densenet121_loss.png")
+    plt.savefig(RESULT_DIR / "graphs" / "mobilenetv2_loss.png")
     plt.close()
 
 
@@ -162,13 +162,13 @@ def main():
     print("Class names:", class_names)
     print("Number of classes:", num_classes)
 
-    model = build_densenet121(num_classes=num_classes)
+    model = build_mobilenetv2(num_classes=num_classes)
 
     model.summary()
 
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(
-            filepath=MODEL_DIR / "densenet121.keras",
+            filepath=MODEL_DIR / "mobilenetv2.keras",
             monitor="val_accuracy",
             save_best_only=True,
             verbose=1
@@ -195,16 +195,16 @@ def main():
 
     plot_history(history)
 
-    test_loss, test_accuracy = model.evaluate(test_ds)
+    test_loss, test_accuracy = model.evaluate(test_ds)21111111111@
 
     print("-" * 50)
-    print(f"DenseNet121 Test Loss: {test_loss:.4f}")
-    print(f"DenseNet121 Test Accuracy: {test_accuracy:.4f}")
+    print(f"MobileNetV2 Test Loss: {test_loss:.4f}")
+    print(f"MobileNetV2 Test Accuracy: {test_accuracy:.4f}")
     print("-" * 50)
 
-    with open(RESULT_DIR / "reports" / "densenet121_test_result.txt", "w", encoding="utf-8") as f:
-        f.write(f"DenseNet121 Test Loss: {test_loss:.4f}\n")
-        f.write(f"DenseNet121 Test Accuracy: {test_accuracy:.4f}\n")
+    with open(RESULT_DIR / "reports" / "mobilenetv2_test_result.txt", "w", encoding="utf-8") as f:
+        f.write(f"MobileNetV2 Test Loss: {test_loss:.4f}\n")
+        f.write(f"MobileNetV2 Test Accuracy: {test_accuracy:.4f}\n")
 
 
 if __name__ == "__main__":
