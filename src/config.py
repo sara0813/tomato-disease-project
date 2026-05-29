@@ -17,7 +17,7 @@ IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 
 # Training settings
-EPOCHS = 20
+EPOCHS = 3
 SEED = 42
 
 # Class count

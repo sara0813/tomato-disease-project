@@ -8,6 +8,54 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 from config import TEST_DIR, MODEL_DIR, RESULT_DIR, IMG_SIZE, BATCH_SIZE
 
 
+def shorten_class_name(name):
+    name = name.replace("Tomato___", "")
+    name = name.replace("_", " ")
+
+    name = name.replace(
+        "Spider mites Two-spotted spider mite",
+        "Spider mites"
+    )
+    name = name.replace(
+        "Tomato Yellow Leaf Curl Virus",
+        "Yellow Leaf Curl"
+    )
+    name = name.replace(
+        "Tomato mosaic virus",
+        "Mosaic virus"
+    )
+    name = name.replace(
+        "Bacterial spot",
+        "Bacterial spot"
+    )
+    name = name.replace(
+        "Early blight",
+        "Early blight"
+    )
+    name = name.replace(
+        "Late blight",
+        "Late blight"
+    )
+    name = name.replace(
+        "Leaf Mold",
+        "Leaf Mold"
+    )
+    name = name.replace(
+        "Septoria leaf spot",
+        "Septoria"
+    )
+    name = name.replace(
+        "Target Spot",
+        "Target Spot"
+    )
+    name = name.replace(
+        "healthy",
+        "Healthy"
+    )
+
+    return name
+
+
 def load_test_dataset():
     test_ds = tf.keras.utils.image_dataset_from_directory(
         TEST_DIR,
@@ -24,6 +72,40 @@ def load_test_dataset():
     )
 
     return test_ds, class_names
+
+
+def save_confusion_matrix(y_true, y_pred, class_names):
+    cm = confusion_matrix(y_true, y_pred)
+
+    short_class_names = [shorten_class_name(name) for name in class_names]
+
+    fig, ax = plt.subplots(figsize=(14, 12))
+
+    disp = ConfusionMatrixDisplay(
+        confusion_matrix=cm,
+        display_labels=short_class_names
+    )
+
+    disp.plot(
+        ax=ax,
+        cmap="Blues",
+        values_format="d",
+        xticks_rotation=45,
+        colorbar=True
+    )
+
+    ax.set_title("Baseline CNN Confusion Matrix", fontsize=16)
+    ax.set_xlabel("Predicted label", fontsize=12)
+    ax.set_ylabel("True label", fontsize=12)
+
+    plt.setp(ax.get_xticklabels(), ha="right", fontsize=9)
+    plt.setp(ax.get_yticklabels(), fontsize=9)
+
+    fig.tight_layout()
+
+    save_path = RESULT_DIR / "confusion_matrix" / "baseline_confusion_matrix.png"
+    fig.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
 
 def main():
@@ -45,7 +127,7 @@ def main():
     y_pred = []
 
     for images, labels in test_ds:
-        predictions = model.predict(images)
+        predictions = model.predict(images, verbose=0)
 
         y_true.extend(np.argmax(labels.numpy(), axis=1))
         y_pred.extend(np.argmax(predictions, axis=1))
@@ -59,25 +141,21 @@ def main():
 
     print(report)
 
-    with open(RESULT_DIR / "reports" / "baseline_classification_report.txt", "w", encoding="utf-8") as f:
+    with open(
+        RESULT_DIR / "reports" / "baseline_classification_report.txt",
+        "w",
+        encoding="utf-8"
+    ) as f:
         f.write(report)
 
-    with open(RESULT_DIR / "reports" / "class_names.json", "w", encoding="utf-8") as f:
+    with open(
+        RESULT_DIR / "reports" / "class_names.json",
+        "w",
+        encoding="utf-8"
+    ) as f:
         json.dump(class_names, f, ensure_ascii=False, indent=4)
 
-    cm = confusion_matrix(y_true, y_pred)
-
-    disp = ConfusionMatrixDisplay(
-        confusion_matrix=cm,
-        display_labels=class_names
-    )
-
-    plt.figure(figsize=(12, 10))
-    disp.plot(cmap="Blues", xticks_rotation=90)
-    plt.title("Baseline CNN Confusion Matrix")
-    plt.tight_layout()
-    plt.savefig(RESULT_DIR / "confusion_matrix" / "baseline_confusion_matrix.png")
-    plt.close()
+    save_confusion_matrix(y_true, y_pred, class_names)
 
     print("Evaluation completed!")
 

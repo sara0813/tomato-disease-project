@@ -20,6 +20,15 @@ from config import (
 from models import build_baseline_cnn
 
 
+# 데이터 증강 레이어는 함수 밖에서 한 번만 생성해야 함
+data_augmentation = tf.keras.Sequential([
+    layers.RandomFlip("horizontal", seed=SEED),
+    layers.RandomRotation(0.1, seed=SEED),
+    layers.RandomZoom(0.1, seed=SEED),
+    layers.RandomContrast(0.1, seed=SEED),
+], name="data_augmentation")
+
+
 def prepare_dirs():
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     (RESULT_DIR / "graphs").mkdir(parents=True, exist_ok=True)
@@ -63,14 +72,8 @@ def load_datasets():
 def preprocess_train(image, label):
     image = tf.cast(image, tf.float32) / 255.0
 
-    data_augmentation = tf.keras.Sequential([
-        layers.RandomFlip("horizontal"),
-        layers.RandomRotation(0.1),
-        layers.RandomZoom(0.1),
-        layers.RandomContrast(0.1),
-    ])
-
     image = data_augmentation(image, training=True)
+
     image = tf.image.random_brightness(image, max_delta=0.1)
     image = tf.clip_by_value(image, 0.0, 1.0)
 
@@ -89,7 +92,10 @@ def optimize_dataset(train_ds, val_ds, test_ds):
     val_ds = val_ds.map(preprocess_eval, num_parallel_calls=autotune)
     test_ds = test_ds.map(preprocess_eval, num_parallel_calls=autotune)
 
-    train_ds = train_ds.cache().prefetch(buffer_size=autotune)
+    # train_ds에는 cache를 쓰지 않는 것이 좋음
+    # 이유: 데이터 증강 결과가 고정될 수 있고, 메모리도 많이 사용할 수 있음
+    train_ds = train_ds.prefetch(buffer_size=autotune)
+
     val_ds = val_ds.cache().prefetch(buffer_size=autotune)
     test_ds = test_ds.cache().prefetch(buffer_size=autotune)
 
