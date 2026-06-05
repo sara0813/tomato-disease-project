@@ -1,14 +1,14 @@
-from pathlib import Path
 import shutil
 from collections import defaultdict
 
 from PIL import Image
 
+from config import DATA_DIR, BANGLADESH_BBOX_EXTERNAL_DIR
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-RAW_DIR = PROJECT_ROOT / "data" / "raw" / "bangladesh"
-OUT_DIR = PROJECT_ROOT / "data" / "processed" / "bangladesh_bbox_external_test"
+RAW_DIR = DATA_DIR / "raw" / "bangladesh"
+OUT_DIR = BANGLADESH_BBOX_EXTERNAL_DIR
+
 
 PLANTVILLAGE_CLASSES = [
     "Tomato___Bacterial_spot",

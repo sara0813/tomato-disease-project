@@ -5,7 +5,20 @@ import tensorflow as tf
 
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 
-from config import TEST_DIR, MODEL_DIR, RESULT_DIR, IMG_SIZE, BATCH_SIZE
+from config import (
+    TEST_DIR,
+    MODEL_PATHS,
+    RESULT_PATHS,
+    CLASS_NAMES_PATH,
+    IMG_SIZE,
+    BATCH_SIZE,
+    ensure_dirs,
+)
+
+
+MODEL_NAME = "baseline_cnn"
+MODEL_PATH = MODEL_PATHS[MODEL_NAME]
+MODEL_RESULT_DIR = RESULT_PATHS[MODEL_NAME]
 
 
 def shorten_class_name(name):
@@ -25,28 +38,8 @@ def shorten_class_name(name):
         "Mosaic virus"
     )
     name = name.replace(
-        "Bacterial spot",
-        "Bacterial spot"
-    )
-    name = name.replace(
-        "Early blight",
-        "Early blight"
-    )
-    name = name.replace(
-        "Late blight",
-        "Late blight"
-    )
-    name = name.replace(
-        "Leaf Mold",
-        "Leaf Mold"
-    )
-    name = name.replace(
         "Septoria leaf spot",
         "Septoria"
-    )
-    name = name.replace(
-        "Target Spot",
-        "Target Spot"
     )
     name = name.replace(
         "healthy",
@@ -103,24 +96,27 @@ def save_confusion_matrix(y_true, y_pred, class_names):
 
     fig.tight_layout()
 
-    save_path = RESULT_DIR / "confusion_matrix" / "baseline_confusion_matrix.png"
+    save_path = MODEL_RESULT_DIR / f"{MODEL_NAME}_confusion_matrix.png"
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
 def main():
-    model_path = MODEL_DIR / "baseline_cnn.keras"
+    ensure_dirs()
 
-    if not model_path.exists():
+    if not TEST_DIR.exists():
+        print("Test dataset folder does not exist.")
+        print("Run this first:")
+        print("python src\\split_dataset.py")
+        return
+
+    if not MODEL_PATH.exists():
         print("Model file does not exist.")
         print("Run this first:")
         print("python src\\train_baseline.py")
         return
 
-    (RESULT_DIR / "reports").mkdir(parents=True, exist_ok=True)
-    (RESULT_DIR / "confusion_matrix").mkdir(parents=True, exist_ok=True)
-
-    model = tf.keras.models.load_model(model_path)
+    model = tf.keras.models.load_model(MODEL_PATH)
     test_ds, class_names = load_test_dataset()
 
     y_true = []
@@ -142,22 +138,20 @@ def main():
     print(report)
 
     with open(
-        RESULT_DIR / "reports" / "baseline_classification_report.txt",
+        MODEL_RESULT_DIR / f"{MODEL_NAME}_classification_report.txt",
         "w",
         encoding="utf-8"
     ) as f:
         f.write(report)
 
-    with open(
-        RESULT_DIR / "reports" / "class_names.json",
-        "w",
-        encoding="utf-8"
-    ) as f:
+    with open(CLASS_NAMES_PATH, "w", encoding="utf-8") as f:
         json.dump(class_names, f, ensure_ascii=False, indent=4)
 
     save_confusion_matrix(y_true, y_pred, class_names)
 
     print("Evaluation completed!")
+    print(f"Report saved to: {MODEL_RESULT_DIR / f'{MODEL_NAME}_classification_report.txt'}")
+    print(f"Confusion matrix saved to: {MODEL_RESULT_DIR / f'{MODEL_NAME}_confusion_matrix.png'}")
 
 
 if __name__ == "__main__":

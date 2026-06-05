@@ -1,12 +1,12 @@
-from pathlib import Path
 import shutil
 from collections import defaultdict
 
+from config import DATA_DIR, TAIWAN_EXTERNAL_DIR
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-RAW_TAIWAN_DIR = PROJECT_ROOT / "data" / "raw" / "taiwan"
-OUT_DIR = PROJECT_ROOT / "data" / "processed" / "taiwan_external_test"
+RAW_TAIWAN_DIR = DATA_DIR / "raw" / "taiwan"
+OUT_DIR = TAIWAN_EXTERNAL_DIR
+
 
 # PlantVillage 모델이 학습한 10개 클래스 이름
 PLANTVILLAGE_CLASSES = [
@@ -22,6 +22,7 @@ PLANTVILLAGE_CLASSES = [
     "Tomato___healthy",
 ]
 
+
 # Taiwan 데이터셋 클래스명 → PlantVillage 클래스명
 CLASS_MAPPING = {
     "Bacterial spot": "Tomato___Bacterial_spot",
@@ -30,6 +31,7 @@ CLASS_MAPPING = {
     "healthy": "Tomato___healthy",
     "Healthy": "Tomato___healthy",
 }
+
 
 # Taiwan은 train/test가 있지만, 우리는 Taiwan으로 학습하지 않으니까
 # train + test 전체를 외부 테스트 데이터로 사용

@@ -1,4 +1,3 @@
-from pathlib import Path
 import sys
 from collections import Counter
 
@@ -8,11 +7,15 @@ import tensorflow as tf
 
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 
-from config import MODEL_DIR, RESULT_DIR, IMG_SIZE, BATCH_SIZE
+from config import (
+    BANGLADESH_BBOX_EXTERNAL_DIR,
+    MODEL_PATHS,
+    EXTERNAL_RESULT_PATHS,
+    IMG_SIZE,
+    BATCH_SIZE,
+    ensure_dirs,
+)
 
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-BANGLADESH_EXTERNAL_DIR = PROJECT_ROOT / "data" / "processed" / "bangladesh_bbox_external_test"
 
 PLANTVILLAGE_CLASSES = [
     "Tomato___Bacterial_spot",
@@ -30,22 +33,29 @@ PLANTVILLAGE_CLASSES = [
 
 MODEL_CONFIGS = {
     "baseline": {
-        "path": MODEL_DIR / "baseline_cnn.keras",
+        "path": MODEL_PATHS["baseline_cnn"],
         "preprocess": "rescale",
     },
     "densenet121": {
-        "path": MODEL_DIR / "densenet121.keras",
+        "path": MODEL_PATHS["densenet121"],
         "preprocess": tf.keras.applications.densenet.preprocess_input,
     },
     "mobilenetv2": {
-        "path": MODEL_DIR / "mobilenetv2.keras",
+        "path": MODEL_PATHS["mobilenetv2"],
         "preprocess": tf.keras.applications.mobilenet_v2.preprocess_input,
     },
     "efficientnetb0": {
-        "path": MODEL_DIR / "efficientnetb0.keras",
+        "path": MODEL_PATHS["efficientnetb0"],
+        "preprocess": tf.keras.applications.efficientnet.preprocess_input,
+    },
+    "efficientnetb0_classweight": {
+        "path": MODEL_PATHS["efficientnetb0_classweight"],
         "preprocess": tf.keras.applications.efficientnet.preprocess_input,
     },
 }
+
+
+RESULT_DIR = EXTERNAL_RESULT_PATHS["bangladesh_bbox"]
 
 
 def shorten_class_name(name):
@@ -60,14 +70,14 @@ def shorten_class_name(name):
 
 
 def load_external_dataset(preprocess):
-    if not BANGLADESH_EXTERNAL_DIR.exists():
-        print(f"[ERROR] Bangladesh bbox external dataset does not exist: {BANGLADESH_EXTERNAL_DIR}")
+    if not BANGLADESH_BBOX_EXTERNAL_DIR.exists():
+        print(f"[ERROR] Bangladesh bbox external dataset does not exist: {BANGLADESH_BBOX_EXTERNAL_DIR}")
         print("Run this first:")
         print("python src\\convert_bangladesh_bbox_crop.py")
         sys.exit(1)
 
     ds = tf.keras.utils.image_dataset_from_directory(
-        BANGLADESH_EXTERNAL_DIR,
+        BANGLADESH_BBOX_EXTERNAL_DIR,
         labels="inferred",
         class_names=PLANTVILLAGE_CLASSES,
         image_size=IMG_SIZE,
@@ -124,10 +134,7 @@ def save_confusion_matrix(y_true, y_pred, model_name):
 
     fig.tight_layout()
 
-    save_dir = RESULT_DIR / "external" / "bangladesh_bbox"
-    save_dir.mkdir(parents=True, exist_ok=True)
-
-    save_path = save_dir / f"{model_name}_bangladesh_bbox_confusion_matrix.png"
+    save_path = RESULT_DIR / f"{model_name}_bangladesh_bbox_confusion_matrix.png"
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
@@ -147,9 +154,9 @@ def evaluate_model(model_name):
 
     if not model_path.exists():
         print(f"[ERROR] Model file does not exist: {model_path}")
-        print("\nAvailable model files:")
-        for file in MODEL_DIR.glob("*.keras"):
-            print(f"- {file.name}")
+        print("\nExpected model files:")
+        for name, model_config in MODEL_CONFIGS.items():
+            print(f"- {name}: {model_config['path']}")
         sys.exit(1)
 
     print("=" * 80)
@@ -191,10 +198,7 @@ def evaluate_model(model_name):
     for idx, class_name in enumerate(PLANTVILLAGE_CLASSES):
         print(f"{class_name}: {pred_counter[idx]}")
 
-    save_dir = RESULT_DIR / "external" / "bangladesh_bbox"
-    save_dir.mkdir(parents=True, exist_ok=True)
-
-    report_path = save_dir / f"{model_name}_bangladesh_bbox_external_report.txt"
+    report_path = RESULT_DIR / f"{model_name}_bangladesh_bbox_external_report.txt"
 
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(f"Model: {model_name}\n")
@@ -210,12 +214,15 @@ def evaluate_model(model_name):
 
 
 def main():
+    ensure_dirs()
+
     if len(sys.argv) < 2:
         print("Usage:")
         print("python src\\evaluate_bangladesh_bbox_external.py efficientnetb0")
         print("python src\\evaluate_bangladesh_bbox_external.py mobilenetv2")
         print("python src\\evaluate_bangladesh_bbox_external.py baseline")
         print("python src\\evaluate_bangladesh_bbox_external.py densenet121")
+        print("python src\\evaluate_bangladesh_bbox_external.py efficientnetb0_classweight")
         sys.exit(1)
 
     model_name = sys.argv[1].lower()

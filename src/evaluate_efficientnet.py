@@ -10,20 +10,24 @@ from sklearn.metrics import (
     accuracy_score
 )
 
-from config import TEST_DIR, MODEL_DIR, RESULT_DIR, IMG_SIZE, BATCH_SIZE
+from config import (
+    TEST_DIR,
+    MODEL_PATHS,
+    RESULT_PATHS,
+    CLASS_NAMES_PATH,
+    IMG_SIZE,
+    BATCH_SIZE,
+    ensure_dirs,
+)
 
 
 # ============================================================
 # Experiment Setting
 # ============================================================
 
-EXPERIMENT_NAME = "efficientnetb0_classweight"
-
-MODEL_PATH = MODEL_DIR / "imbalance" / f"{EXPERIMENT_NAME}.keras"
-
-EXPERIMENT_RESULT_DIR = RESULT_DIR / "imbalance" / EXPERIMENT_NAME
-REPORT_DIR = EXPERIMENT_RESULT_DIR / "reports"
-CONFUSION_MATRIX_DIR = EXPERIMENT_RESULT_DIR / "confusion_matrix"
+MODEL_NAME = "efficientnetb0_classweight"
+MODEL_PATH = MODEL_PATHS[MODEL_NAME]
+MODEL_RESULT_DIR = RESULT_PATHS[MODEL_NAME]
 
 
 def shorten_class_name(name):
@@ -37,11 +41,6 @@ def shorten_class_name(name):
     name = name.replace("healthy", "Healthy")
 
     return name
-
-
-def prepare_dirs():
-    REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    CONFUSION_MATRIX_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def load_test_dataset():
@@ -61,7 +60,8 @@ def load_test_dataset():
                 tf.cast(image, tf.float32)
             ),
             label
-        )
+        ),
+        num_parallel_calls=tf.data.AUTOTUNE
     )
 
     test_ds = test_ds.prefetch(tf.data.AUTOTUNE)
@@ -98,7 +98,7 @@ def save_confusion_matrix(y_true, y_pred, class_names):
 
     fig.tight_layout()
 
-    save_path = CONFUSION_MATRIX_DIR / f"{EXPERIMENT_NAME}_confusion_matrix.png"
+    save_path = MODEL_RESULT_DIR / f"{MODEL_NAME}_confusion_matrix.png"
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
@@ -106,7 +106,13 @@ def save_confusion_matrix(y_true, y_pred, class_names):
 
 
 def main():
-    prepare_dirs()
+    ensure_dirs()
+
+    if not TEST_DIR.exists():
+        print("Test dataset folder does not exist.")
+        print("Run this first:")
+        print("python src\\split_dataset.py")
+        return
 
     if not MODEL_PATH.exists():
         print("Model file does not exist.")
@@ -133,33 +139,35 @@ def main():
         y_true,
         y_pred,
         target_names=class_names,
-        digits=4
+        digits=4,
+        zero_division=0
     )
 
     print("\n" + "=" * 60)
-    print(f"Experiment: {EXPERIMENT_NAME}")
+    print(f"Experiment: {MODEL_NAME}")
     print(f"Test Accuracy: {test_accuracy:.4f}")
     print("=" * 60)
     print(report)
 
-    report_path = REPORT_DIR / f"{EXPERIMENT_NAME}_classification_report.txt"
+    report_path = MODEL_RESULT_DIR / f"{MODEL_NAME}_classification_report.txt"
 
     with open(report_path, "w", encoding="utf-8") as f:
-        f.write(f"Experiment: {EXPERIMENT_NAME}\n")
+        f.write(f"Experiment: {MODEL_NAME}\n")
         f.write(f"Model path: {MODEL_PATH}\n")
         f.write(f"Test Accuracy: {test_accuracy:.4f}\n\n")
         f.write(report)
 
-    result_path = REPORT_DIR / f"{EXPERIMENT_NAME}_test_result.txt"
+    result_path = MODEL_RESULT_DIR / f"{MODEL_NAME}_test_result.txt"
 
     with open(result_path, "w", encoding="utf-8") as f:
-        f.write(f"Experiment: {EXPERIMENT_NAME}\n")
+        f.write(f"Experiment: {MODEL_NAME}\n")
         f.write(f"Model path: {MODEL_PATH}\n")
         f.write(f"Test Accuracy: {test_accuracy:.4f}\n")
 
-    class_name_path = REPORT_DIR / "class_names.json"
+    with open(CLASS_NAMES_PATH, "w", encoding="utf-8") as f:
+        json.dump(class_names, f, ensure_ascii=False, indent=4)
 
-    with open(class_name_path, "w", encoding="utf-8") as f:
+    with open(MODEL_RESULT_DIR / "class_names.json", "w", encoding="utf-8") as f:
         json.dump(class_names, f, ensure_ascii=False, indent=4)
 
     save_confusion_matrix(y_true, y_pred, class_names)

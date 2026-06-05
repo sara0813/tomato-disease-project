@@ -1,6 +1,10 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import os
+
+from config import IMBALANCE_RESULT_DIR, ensure_dirs
+
+
+MODEL_NAME = "efficientnetb0"
 
 data = {
     "class_name": [
@@ -29,22 +33,34 @@ data = {
     ]
 }
 
-df = pd.DataFrame(data)
-df = df.sort_values("f1_score", ascending=True)
 
-os.makedirs("results/imbalance", exist_ok=True)
+def main():
+    ensure_dirs()
 
-plt.figure(figsize=(12, 6))
-plt.bar(df["class_name"], df["f1_score"])
-plt.xticks(rotation=45, ha="right")
-plt.ylim(0, 1.0)
-plt.title("Class-wise F1-score of EfficientNetB0")
-plt.xlabel("Class")
-plt.ylabel("F1-score")
-plt.tight_layout()
-plt.savefig("results/imbalance/efficientnetb0_classwise_f1.png", dpi=300)
-plt.close()
+    df = pd.DataFrame(data)
+    df = df.sort_values("f1_score", ascending=True)
 
-df.to_csv("results/imbalance/efficientnetb0_classwise_f1.csv", index=False)
+    csv_path = IMBALANCE_RESULT_DIR / f"{MODEL_NAME}_classwise_f1.csv"
+    png_path = IMBALANCE_RESULT_DIR / f"{MODEL_NAME}_classwise_f1.png"
 
-print(df)
+    df.to_csv(csv_path, index=False)
+
+    plt.figure(figsize=(12, 6))
+    plt.bar(df["class_name"], df["f1_score"])
+    plt.xticks(rotation=45, ha="right")
+    plt.ylim(0, 1.0)
+    plt.title("Class-wise F1-score of EfficientNetB0")
+    plt.xlabel("Class")
+    plt.ylabel("F1-score")
+    plt.tight_layout()
+    plt.savefig(png_path, dpi=300)
+    plt.close()
+
+    print(df)
+    print("\nSaved files:")
+    print(f"- {csv_path}")
+    print(f"- {png_path}")
+
+
+if __name__ == "__main__":
+    main()

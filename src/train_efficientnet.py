@@ -10,12 +10,14 @@ from config import (
     TRAIN_DIR,
     VAL_DIR,
     TEST_DIR,
-    MODEL_DIR,
-    RESULT_DIR,
+    MODEL_PATHS,
+    RESULT_PATHS,
+    CLASS_NAMES_PATH,
     IMG_SIZE,
     BATCH_SIZE,
     EPOCHS,
-    SEED
+    SEED,
+    ensure_dirs,
 )
 
 
@@ -23,13 +25,11 @@ from config import (
 # Experiment Setting
 # ============================================================
 
-EXPERIMENT_NAME = "efficientnetb0_classweight"
+MODEL_NAME = "efficientnetb0_classweight"
 USE_CLASS_WEIGHT = True
 
-MODEL_SAVE_DIR = MODEL_DIR / "imbalance"
-EXPERIMENT_RESULT_DIR = RESULT_DIR / "imbalance" / EXPERIMENT_NAME
-GRAPH_DIR = EXPERIMENT_RESULT_DIR / "graphs"
-REPORT_DIR = EXPERIMENT_RESULT_DIR / "reports"
+MODEL_PATH = MODEL_PATHS[MODEL_NAME]
+MODEL_RESULT_DIR = RESULT_PATHS[MODEL_NAME]
 
 
 # ============================================================
@@ -42,21 +42,6 @@ data_augmentation = tf.keras.Sequential([
     layers.RandomZoom(0.1, seed=SEED),
     layers.RandomContrast(0.1, seed=SEED),
 ], name="data_augmentation")
-
-
-# ============================================================
-# Prepare Directories
-# ============================================================
-
-def prepare_dirs():
-    MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    MODEL_SAVE_DIR.mkdir(parents=True, exist_ok=True)
-
-    (RESULT_DIR / "graphs").mkdir(parents=True, exist_ok=True)
-    (RESULT_DIR / "reports").mkdir(parents=True, exist_ok=True)
-
-    GRAPH_DIR.mkdir(parents=True, exist_ok=True)
-    REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ============================================================
@@ -91,12 +76,12 @@ def load_datasets():
 
     class_names = train_ds.class_names
 
-    # 기존 평가 코드와의 호환성을 위해 기존 위치에도 저장
-    with open(RESULT_DIR / "reports" / "class_names.json", "w", encoding="utf-8") as f:
+    # 공통 클래스 이름 저장
+    with open(CLASS_NAMES_PATH, "w", encoding="utf-8") as f:
         json.dump(class_names, f, ensure_ascii=False, indent=4)
 
-    # 이번 실험 결과 폴더에도 따로 저장
-    with open(REPORT_DIR / "class_names.json", "w", encoding="utf-8") as f:
+    # 해당 실험 폴더에도 저장
+    with open(MODEL_RESULT_DIR / "class_names.json", "w", encoding="utf-8") as f:
         json.dump(class_names, f, ensure_ascii=False, indent=4)
 
     return train_ds, val_ds, test_ds, class_names
@@ -165,9 +150,9 @@ def make_class_weight(class_names):
         })
 
     class_weight_df = pd.DataFrame(rows)
-    class_weight_df.to_csv(REPORT_DIR / "class_weight_info.csv", index=False)
+    class_weight_df.to_csv(MODEL_RESULT_DIR / "class_weight_info.csv", index=False)
 
-    with open(REPORT_DIR / "class_weight_dict.json", "w", encoding="utf-8") as f:
+    with open(MODEL_RESULT_DIR / "class_weight_dict.json", "w", encoding="utf-8") as f:
         json.dump(class_weight_dict, f, ensure_ascii=False, indent=4)
 
     print("=" * 60 + "\n")
@@ -244,7 +229,7 @@ def build_efficientnetb0(num_classes):
 
 def plot_history(history):
     history_df = pd.DataFrame(history.history)
-    history_df.to_csv(REPORT_DIR / f"{EXPERIMENT_NAME}_history.csv", index=False)
+    history_df.to_csv(MODEL_RESULT_DIR / f"{MODEL_NAME}_history.csv", index=False)
 
     plt.figure()
     plt.plot(history.history["accuracy"], label="Train Accuracy")
@@ -253,7 +238,7 @@ def plot_history(history):
     plt.ylabel("Accuracy")
     plt.title("EfficientNetB0 + Class Weight Accuracy")
     plt.legend()
-    plt.savefig(GRAPH_DIR / f"{EXPERIMENT_NAME}_accuracy.png")
+    plt.savefig(MODEL_RESULT_DIR / f"{MODEL_NAME}_accuracy.png")
     plt.close()
 
     plt.figure()
@@ -263,7 +248,7 @@ def plot_history(history):
     plt.ylabel("Loss")
     plt.title("EfficientNetB0 + Class Weight Loss")
     plt.legend()
-    plt.savefig(GRAPH_DIR / f"{EXPERIMENT_NAME}_loss.png")
+    plt.savefig(MODEL_RESULT_DIR / f"{MODEL_NAME}_loss.png")
     plt.close()
 
 
@@ -272,7 +257,7 @@ def plot_history(history):
 # ============================================================
 
 def main():
-    prepare_dirs()
+    ensure_dirs()
 
     if not TRAIN_DIR.exists() or not VAL_DIR.exists() or not TEST_DIR.exists():
         print("Processed dataset folders do not exist.")
@@ -293,17 +278,15 @@ def main():
 
     print("Class names:", class_names)
     print("Number of classes:", num_classes)
-    print("Experiment:", EXPERIMENT_NAME)
+    print("Experiment:", MODEL_NAME)
 
     model = build_efficientnetb0(num_classes=num_classes)
 
     model.summary()
 
-    model_save_path = MODEL_SAVE_DIR / f"{EXPERIMENT_NAME}.keras"
-
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(
-            filepath=model_save_path,
+            filepath=MODEL_PATH,
             monitor="val_accuracy",
             save_best_only=True,
             verbose=1
@@ -330,24 +313,24 @@ def main():
     )
 
     # EarlyStopping으로 복원된 best weight를 다시 저장
-    model.save(model_save_path)
+    model.save(MODEL_PATH)
 
     plot_history(history)
 
     test_loss, test_accuracy = model.evaluate(test_ds)
 
     print("-" * 50)
-    print(f"Experiment: {EXPERIMENT_NAME}")
+    print(f"Experiment: {MODEL_NAME}")
     print(f"EfficientNetB0 + Class Weight Test Loss: {test_loss:.4f}")
     print(f"EfficientNetB0 + Class Weight Test Accuracy: {test_accuracy:.4f}")
-    print(f"Model saved to: {model_save_path}")
+    print(f"Model saved to: {MODEL_PATH}")
     print("-" * 50)
 
-    with open(REPORT_DIR / f"{EXPERIMENT_NAME}_test_result.txt", "w", encoding="utf-8") as f:
-        f.write(f"Experiment: {EXPERIMENT_NAME}\n")
+    with open(MODEL_RESULT_DIR / f"{MODEL_NAME}_test_result.txt", "w", encoding="utf-8") as f:
+        f.write(f"Experiment: {MODEL_NAME}\n")
         f.write(f"EfficientNetB0 + Class Weight Test Loss: {test_loss:.4f}\n")
         f.write(f"EfficientNetB0 + Class Weight Test Accuracy: {test_accuracy:.4f}\n")
-        f.write(f"Model saved to: {model_save_path}\n")
+        f.write(f"Model saved to: {MODEL_PATH}\n")
 
 
 if __name__ == "__main__":

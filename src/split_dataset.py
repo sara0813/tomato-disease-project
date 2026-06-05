@@ -1,22 +1,29 @@
-from pathlib import Path
 import random
 import shutil
 
-RAW_DIR = Path("data/raw/plantvillage")
-OUTPUT_DIR = Path("data/processed/plantvillage")
+from config import RAW_DATA_DIR, PROCESSED_DATA_DIR, SEED
+
+
+RAW_DIR = RAW_DATA_DIR
+OUTPUT_DIR = PROCESSED_DATA_DIR
 
 TRAIN_RATIO = 0.70
 VAL_RATIO = 0.15
 TEST_RATIO = 0.15
 
-SEED = 42
-IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".JPG", ".JPEG", ".PNG"]
-
-random.seed(SEED)
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 
 def make_dir(path):
     path.mkdir(parents=True, exist_ok=True)
+
+
+def reset_output_dir():
+    if OUTPUT_DIR.exists():
+        shutil.rmtree(OUTPUT_DIR)
+
+    for split_name in ["train", "val", "test"]:
+        make_dir(OUTPUT_DIR / split_name)
 
 
 def copy_images(image_list, class_name, split_name):
@@ -38,7 +45,13 @@ def main():
         print("No class folders found.")
         return
 
+    reset_output_dir()
+
+    random.seed(SEED)
+
     print(f"Found {len(class_folders)} classes.")
+    print(f"Raw dataset: {RAW_DIR}")
+    print(f"Output dataset: {OUTPUT_DIR}")
     print("-" * 60)
 
     for class_folder in sorted(class_folders):
@@ -46,7 +59,7 @@ def main():
 
         images = [
             file for file in class_folder.rglob("*")
-            if file.suffix in IMAGE_EXTENSIONS
+            if file.is_file() and file.suffix.lower() in IMAGE_EXTENSIONS
         ]
 
         random.shuffle(images)

@@ -8,27 +8,28 @@ from config import (
     TRAIN_DIR,
     VAL_DIR,
     TEST_DIR,
-    MODEL_DIR,
-    RESULT_DIR,
+    MODEL_PATHS,
+    RESULT_PATHS,
+    CLASS_NAMES_PATH,
     IMG_SIZE,
     BATCH_SIZE,
     EPOCHS,
-    SEED
+    SEED,
+    ensure_dirs,
 )
 
+MODEL_NAME = "densenet121"
+MODEL_PATH = MODEL_PATHS[MODEL_NAME]
+MODEL_RESULT_DIR = RESULT_PATHS[MODEL_NAME]
 
+
+# 데이터 증강 레이어는 함수 밖에서 한 번만 생성
 data_augmentation = tf.keras.Sequential([
     layers.RandomFlip("horizontal", seed=SEED),
     layers.RandomRotation(0.1, seed=SEED),
     layers.RandomZoom(0.1, seed=SEED),
     layers.RandomContrast(0.1, seed=SEED),
 ], name="data_augmentation")
-
-
-def prepare_dirs():
-    MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    (RESULT_DIR / "graphs").mkdir(parents=True, exist_ok=True)
-    (RESULT_DIR / "reports").mkdir(parents=True, exist_ok=True)
 
 
 def load_datasets():
@@ -59,7 +60,7 @@ def load_datasets():
 
     class_names = train_ds.class_names
 
-    with open(RESULT_DIR / "reports" / "class_names.json", "w", encoding="utf-8") as f:
+    with open(CLASS_NAMES_PATH, "w", encoding="utf-8") as f:
         json.dump(class_names, f, ensure_ascii=False, indent=4)
 
     return train_ds, val_ds, test_ds, class_names
@@ -122,7 +123,7 @@ def build_densenet121(num_classes):
 
 def plot_history(history):
     history_df = pd.DataFrame(history.history)
-    history_df.to_csv(RESULT_DIR / "reports" / "densenet121_history.csv", index=False)
+    history_df.to_csv(MODEL_RESULT_DIR / f"{MODEL_NAME}_history.csv", index=False)
 
     plt.figure()
     plt.plot(history.history["accuracy"], label="Train Accuracy")
@@ -131,7 +132,7 @@ def plot_history(history):
     plt.ylabel("Accuracy")
     plt.title("DenseNet121 Accuracy")
     plt.legend()
-    plt.savefig(RESULT_DIR / "graphs" / "densenet121_accuracy.png")
+    plt.savefig(MODEL_RESULT_DIR / f"{MODEL_NAME}_accuracy.png")
     plt.close()
 
     plt.figure()
@@ -141,12 +142,12 @@ def plot_history(history):
     plt.ylabel("Loss")
     plt.title("DenseNet121 Loss")
     plt.legend()
-    plt.savefig(RESULT_DIR / "graphs" / "densenet121_loss.png")
+    plt.savefig(MODEL_RESULT_DIR / f"{MODEL_NAME}_loss.png")
     plt.close()
 
 
 def main():
-    prepare_dirs()
+    ensure_dirs()
 
     if not TRAIN_DIR.exists() or not VAL_DIR.exists() or not TEST_DIR.exists():
         print("Processed dataset folders do not exist.")
@@ -168,7 +169,7 @@ def main():
 
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(
-            filepath=MODEL_DIR / "densenet121.keras",
+            filepath=MODEL_PATH,
             monitor="val_accuracy",
             save_best_only=True,
             verbose=1
@@ -202,7 +203,7 @@ def main():
     print(f"DenseNet121 Test Accuracy: {test_accuracy:.4f}")
     print("-" * 50)
 
-    with open(RESULT_DIR / "reports" / "densenet121_test_result.txt", "w", encoding="utf-8") as f:
+    with open(MODEL_RESULT_DIR / f"{MODEL_NAME}_test_result.txt", "w", encoding="utf-8") as f:
         f.write(f"DenseNet121 Test Loss: {test_loss:.4f}\n")
         f.write(f"DenseNet121 Test Accuracy: {test_accuracy:.4f}\n")
 

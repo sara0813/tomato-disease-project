@@ -28,9 +28,11 @@ This project aims to classify tomato leaf images into healthy and disease catego
 - AI Hub crop disease image dataset
 
 ## Models
-
 - Baseline CNN
 - DenseNet121
+- EfficientNetB0
+- EfficientNetB0 + Class Weight
+- MobileNetV2
 
 ## Evaluation Metrics
 
@@ -46,6 +48,17 @@ This project aims to classify tomato leaf images into healthy and disease catego
 - TensorFlow
 - Streamlit
 - VSCode
+
+## Current Results
+
+| Model | Test Accuracy | Note |
+|---|---:|---|
+| Baseline CNN | ... | custom CNN |
+| DenseNet121 | 0.8058 | transfer learning |
+| EfficientNetB0 | 0.8621 | best local result |
+| EfficientNetB0 + Class Weight | 0.8230 | imbalance experiment |
+| MobileNetV2 | 진행/예정 | lightweight model |
+
 
 
 python src\data_preprocessing.py
