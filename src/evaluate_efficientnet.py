@@ -3,9 +3,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+    accuracy_score
+)
 
 from config import TEST_DIR, MODEL_DIR, RESULT_DIR, IMG_SIZE, BATCH_SIZE
+
+
+# ============================================================
+# Experiment Setting
+# ============================================================
+
+EXPERIMENT_NAME = "efficientnetb0_classweight"
+
+MODEL_PATH = MODEL_DIR / "imbalance" / f"{EXPERIMENT_NAME}.keras"
+
+EXPERIMENT_RESULT_DIR = RESULT_DIR / "imbalance" / EXPERIMENT_NAME
+REPORT_DIR = EXPERIMENT_RESULT_DIR / "reports"
+CONFUSION_MATRIX_DIR = EXPERIMENT_RESULT_DIR / "confusion_matrix"
 
 
 def shorten_class_name(name):
@@ -21,6 +39,11 @@ def shorten_class_name(name):
     return name
 
 
+def prepare_dirs():
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    CONFUSION_MATRIX_DIR.mkdir(parents=True, exist_ok=True)
+
+
 def load_test_dataset():
     test_ds = tf.keras.utils.image_dataset_from_directory(
         TEST_DIR,
@@ -34,10 +57,14 @@ def load_test_dataset():
 
     test_ds = test_ds.map(
         lambda image, label: (
-            tf.keras.applications.efficientnet.preprocess_input(tf.cast(image, tf.float32)),
+            tf.keras.applications.efficientnet.preprocess_input(
+                tf.cast(image, tf.float32)
+            ),
             label
         )
     )
+
+    test_ds = test_ds.prefetch(tf.data.AUTOTUNE)
 
     return test_ds, class_names
 
@@ -62,7 +89,7 @@ def save_confusion_matrix(y_true, y_pred, class_names):
         colorbar=True
     )
 
-    ax.set_title("EfficientNetB0 Confusion Matrix", fontsize=16)
+    ax.set_title("EfficientNetB0 + Class Weight Confusion Matrix", fontsize=16)
     ax.set_xlabel("Predicted label", fontsize=12)
     ax.set_ylabel("True label", fontsize=12)
 
@@ -71,24 +98,24 @@ def save_confusion_matrix(y_true, y_pred, class_names):
 
     fig.tight_layout()
 
-    save_path = RESULT_DIR / "confusion_matrix" / "efficientnetb0_confusion_matrix.png"
+    save_path = CONFUSION_MATRIX_DIR / f"{EXPERIMENT_NAME}_confusion_matrix.png"
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
+    print(f"Confusion matrix saved to: {save_path}")
+
 
 def main():
-    model_path = MODEL_DIR / "efficientnetb0.keras"
+    prepare_dirs()
 
-    if not model_path.exists():
+    if not MODEL_PATH.exists():
         print("Model file does not exist.")
+        print(f"Missing model path: {MODEL_PATH}")
         print("Run this first:")
         print("python src\\train_efficientnet.py")
         return
 
-    (RESULT_DIR / "reports").mkdir(parents=True, exist_ok=True)
-    (RESULT_DIR / "confusion_matrix").mkdir(parents=True, exist_ok=True)
-
-    model = tf.keras.models.load_model(model_path)
+    model = tf.keras.models.load_model(MODEL_PATH)
     test_ds, class_names = load_test_dataset()
 
     y_true = []
@@ -100,6 +127,8 @@ def main():
         y_true.extend(np.argmax(labels.numpy(), axis=1))
         y_pred.extend(np.argmax(predictions, axis=1))
 
+    test_accuracy = accuracy_score(y_true, y_pred)
+
     report = classification_report(
         y_true,
         y_pred,
@@ -107,25 +136,37 @@ def main():
         digits=4
     )
 
+    print("\n" + "=" * 60)
+    print(f"Experiment: {EXPERIMENT_NAME}")
+    print(f"Test Accuracy: {test_accuracy:.4f}")
+    print("=" * 60)
     print(report)
 
-    with open(
-        RESULT_DIR / "reports" / "efficientnetb0_classification_report.txt",
-        "w",
-        encoding="utf-8"
-    ) as f:
+    report_path = REPORT_DIR / f"{EXPERIMENT_NAME}_classification_report.txt"
+
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.write(f"Experiment: {EXPERIMENT_NAME}\n")
+        f.write(f"Model path: {MODEL_PATH}\n")
+        f.write(f"Test Accuracy: {test_accuracy:.4f}\n\n")
         f.write(report)
 
-    with open(
-        RESULT_DIR / "reports" / "class_names.json",
-        "w",
-        encoding="utf-8"
-    ) as f:
+    result_path = REPORT_DIR / f"{EXPERIMENT_NAME}_test_result.txt"
+
+    with open(result_path, "w", encoding="utf-8") as f:
+        f.write(f"Experiment: {EXPERIMENT_NAME}\n")
+        f.write(f"Model path: {MODEL_PATH}\n")
+        f.write(f"Test Accuracy: {test_accuracy:.4f}\n")
+
+    class_name_path = REPORT_DIR / "class_names.json"
+
+    with open(class_name_path, "w", encoding="utf-8") as f:
         json.dump(class_names, f, ensure_ascii=False, indent=4)
 
     save_confusion_matrix(y_true, y_pred, class_names)
 
-    print("EfficientNetB0 evaluation completed!")
+    print("\nEfficientNetB0 + Class Weight evaluation completed!")
+    print(f"Report saved to: {report_path}")
+    print(f"Result saved to: {result_path}")
 
 
 if __name__ == "__main__":

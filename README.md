@@ -46,3 +46,14 @@ This project aims to classify tomato leaf images into healthy and disease catego
 - TensorFlow
 - Streamlit
 - VSCode
+
+
+python src\data_preprocessing.py
+python src\split_dataset.py
+python src\prepare_taiwan_external_test.py
+python src\convert_bangladesh_bbox_crop.py
+
+python src\train_efficientnet.py
+python src\evaluate_efficientnet.py
+python src\evaluate_taiwan_external.py efficientnetb0
+python src\evaluate_bangladesh_bbox_external.py efficientnetb0
