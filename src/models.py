@@ -1,6 +1,11 @@
 import tensorflow as tf
-from tensorflow.keras import layers, models
-from tensorflow.keras.applications import DenseNet121, MobileNetV2
+
+layers = tf.keras.layers
+models = tf.keras.models
+
+DenseNet121 = tf.keras.applications.DenseNet121
+MobileNetV2 = tf.keras.applications.MobileNetV2
+EfficientNetB0 = tf.keras.applications.EfficientNetB0
 
 
 def build_baseline_cnn(input_shape=(224, 224, 3), num_classes=10):
@@ -84,8 +89,9 @@ def build_mobilenetv2(input_shape=(224, 224, 3), num_classes=10):
 
     return model
 
+
 def build_efficientnetb0(input_shape=(224, 224, 3), num_classes=10):
-    base_model = tf.keras.applications.EfficientNetB0(
+    base_model = EfficientNetB0(
         weights="imagenet",
         include_top=False,
         input_shape=input_shape

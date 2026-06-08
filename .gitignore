@@ -20,7 +20,6 @@ models/
 *.joblib
 
 # Results
-# Results
 results/*
 !results/summary/
 !results/summary/*.csv
@@ -32,3 +31,12 @@ Thumbs.db
 
 # VSCode
 .vscode/
+
+
+*.zip
+*.log
+.env
+wandb/
+mlruns/
+checkpoints/
+*.ckpt

@@ -243,8 +243,10 @@ python src/evaluate/evaluate_mobilenet.py
 Evaluate external datasets:
 
 ```bash
-python src/evaluate/evaluate_taiwan_external.py
-python src/evaluate/evaluate_bangladesh_bbox_external.py
+python src/evaluate/evaluate_external.py taiwan efficientnetb0
+python src/evaluate/evaluate_external.py taiwan efficientnetb0_classweight
+python src/evaluate/evaluate_external.py bangladesh_bbox efficientnetb0
+python src/evaluate/evaluate_external.py bangladesh_bbox mobilenetv2
 ```
 
 ---
