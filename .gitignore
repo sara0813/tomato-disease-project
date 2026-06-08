@@ -1,6 +1,6 @@
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 .ipynb_checkpoints/
 
 # Virtual environment
@@ -20,11 +20,11 @@ models/
 *.joblib
 
 # Results
-results/
-*.png
-*.jpg
-*.jpeg
-*.csv
+# Results
+results/*
+!results/summary/
+!results/summary/*.csv
+!results/summary/*.md
 
 # System files
 .DS_Store
