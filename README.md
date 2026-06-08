@@ -154,8 +154,8 @@ python -m venv .venv
 
 For Windows PowerShell:
 
-```bash
-.venv\Scripts\activate
+```powershell
+.\.venv\Scripts\Activate.ps1
 ```
 
 Install required packages:
@@ -190,6 +190,13 @@ Analyze class imbalance:
 
 ```bash
 python src/data_prep/analyze_class_imbalance.py
+```
+
+Prepare external evaluation datasets after placing the raw external datasets under `data/raw/`:
+
+```bash
+python src/data_prep/prepare_taiwan_external_test.py
+python src/data_prep/convert_bangladesh_bbox_crop.py
 ```
 
 ---
@@ -230,6 +237,9 @@ python src/train/train_mobilenet.py
 
 ## Evaluation
 
+> Note: Evaluation scripts require trained model files under `models/`.  
+> Since model files are excluded from GitHub, train the models first before running evaluation.
+
 Evaluate each trained model on the PlantVillage test set:
 
 ```bash
@@ -253,6 +263,8 @@ python src/evaluate/evaluate_external.py bangladesh_bbox mobilenetv2
 
 ## Result Summary
 
+> Note: Summary scripts require previous training and evaluation results to exist under `results/`.
+
 Generate summary tables for presentation and report writing:
 
 ```bash
@@ -270,6 +282,12 @@ results/summary/
 ---
 
 ## Current Experiment Status
+
+Main summary files:
+
+- `results/summary/model_comparison_summary.md`
+- `results/summary/classwise_f1_summary.md`
+- `results/summary/external_test_summary.md`
 
 Completed:
 
