@@ -83,3 +83,27 @@ def build_mobilenetv2(input_shape=(224, 224, 3), num_classes=10):
     )
 
     return model
+
+def build_efficientnetb0(input_shape=(224, 224, 3), num_classes=10):
+    base_model = tf.keras.applications.EfficientNetB0(
+        weights="imagenet",
+        include_top=False,
+        input_shape=input_shape
+    )
+    base_model.trainable = False
+
+    inputs = layers.Input(shape=input_shape)
+    x = base_model(inputs, training=False)
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dropout(0.3)(x)
+    x = layers.Dense(256, activation="relu")(x)
+    x = layers.Dropout(0.3)(x)
+    outputs = layers.Dense(num_classes, activation="softmax")(x)
+
+    model = models.Model(inputs, outputs)
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+        loss="categorical_crossentropy",
+        metrics=["accuracy"]
+    )
+    return model

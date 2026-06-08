@@ -46,8 +46,13 @@ def main():
         print(f"Raw dataset folder does not exist: {RAW_DIR}")
         return
 
-    class_folders = [folder for folder in RAW_DIR.iterdir() if folder.is_dir()]
+    if OUTPUT_DIR.name != "plantvillage":
+        print(f"[ERROR] OUTPUT_DIR must be the PlantVillage processed folder, but got: {OUTPUT_DIR}")
+        print("Check PROCESSED_DATA_DIR in config.py")
+        return
 
+    class_folders = [folder for folder in RAW_DIR.iterdir() if folder.is_dir()]
+    
     if len(class_folders) == 0:
         print("No class folders found.")
         return
@@ -64,10 +69,10 @@ def main():
     for class_folder in sorted(class_folders):
         class_name = class_folder.name
 
-        images = [
+        images = sorted([
             file for file in class_folder.rglob("*")
             if file.is_file() and file.suffix.lower() in IMAGE_EXTENSIONS
-        ]
+        ])
 
         random.shuffle(images)
 
