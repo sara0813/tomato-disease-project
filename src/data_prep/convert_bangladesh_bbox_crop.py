@@ -1,7 +1,14 @@
+from pathlib import Path
+import sys
 import shutil
 from collections import defaultdict
 
 from PIL import Image
+
+SRC_DIR = Path(__file__).resolve().parents[1]
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from config import DATA_DIR, BANGLADESH_BBOX_EXTERNAL_DIR
 
@@ -166,7 +173,10 @@ def convert_bbox_crop():
                     cropped = img.crop((x1, y1, x2, y2))
 
                     save_dir = OUT_DIR / target_class
-                    save_name = f"bangladesh_{split}_{image_path.stem}_bbox{line_idx:03d}_class{class_id}.jpg"
+                    save_name = (
+                        f"bangladesh_{split}_{image_path.stem}_"
+                        f"bbox{line_idx:03d}_class{class_id}.jpg"
+                    )
                     save_path = save_dir / save_name
 
                     cropped.save(save_path, quality=95)

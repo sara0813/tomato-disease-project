@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import layers, models
-from tensorflow.keras.applications import DenseNet121
+from tensorflow.keras.applications import DenseNet121, MobileNetV2
 
 
 def build_baseline_cnn(input_shape=(224, 224, 3), num_classes=10):
@@ -42,6 +42,33 @@ def build_densenet121(input_shape=(224, 224, 3), num_classes=10):
 
     inputs = layers.Input(shape=input_shape)
     x = tf.keras.applications.densenet.preprocess_input(inputs)
+    x = base_model(x, training=False)
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dropout(0.3)(x)
+    outputs = layers.Dense(num_classes, activation="softmax")(x)
+
+    model = models.Model(inputs, outputs)
+
+    model.compile(
+        optimizer="adam",
+        loss="categorical_crossentropy",
+        metrics=["accuracy"]
+    )
+
+    return model
+
+
+def build_mobilenetv2(input_shape=(224, 224, 3), num_classes=10):
+    base_model = MobileNetV2(
+        weights="imagenet",
+        include_top=False,
+        input_shape=input_shape
+    )
+
+    base_model.trainable = False
+
+    inputs = layers.Input(shape=input_shape)
+    x = tf.keras.applications.mobilenet_v2.preprocess_input(inputs)
     x = base_model(x, training=False)
     x = layers.GlobalAveragePooling2D()(x)
     x = layers.Dropout(0.3)(x)

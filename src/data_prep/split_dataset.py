@@ -1,5 +1,12 @@
+from pathlib import Path
+import sys
 import random
 import shutil
+
+SRC_DIR = Path(__file__).resolve().parents[1]
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from config import RAW_DATA_DIR, PROCESSED_DATA_DIR, SEED
 

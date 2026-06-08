@@ -1,5 +1,13 @@
+from pathlib import Path
+import sys
+
 import pandas as pd
 import matplotlib.pyplot as plt
+
+SRC_DIR = Path(__file__).resolve().parents[1]
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from config import IMBALANCE_RESULT_DIR, ensure_dirs
 
@@ -43,7 +51,7 @@ def main():
     csv_path = IMBALANCE_RESULT_DIR / f"{MODEL_NAME}_classwise_f1.csv"
     png_path = IMBALANCE_RESULT_DIR / f"{MODEL_NAME}_classwise_f1.png"
 
-    df.to_csv(csv_path, index=False)
+    df.to_csv(csv_path, index=False, encoding="utf-8-sig")
 
     plt.figure(figsize=(12, 6))
     plt.bar(df["class_name"], df["f1_score"])

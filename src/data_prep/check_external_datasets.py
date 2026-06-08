@@ -1,11 +1,23 @@
 from pathlib import Path
+import sys
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = Path(__file__).resolve().parents[1]
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from config import (
+    DATA_DIR,
+    TAIWAN_EXTERNAL_DIR,
+    BANGLADESH_BBOX_EXTERNAL_DIR,
+)
+
 
 DATASETS = {
-    "Taiwan Raw": PROJECT_ROOT / "data" / "raw" / "taiwan",
-    "Bangladesh Raw": PROJECT_ROOT / "data" / "raw" / "bangladesh",
-    "Bangladesh Processed": PROJECT_ROOT / "data" / "processed" / "bangladesh",
+    "Taiwan Raw": DATA_DIR / "raw" / "taiwan",
+    "Taiwan External": TAIWAN_EXTERNAL_DIR,
+    "Bangladesh Raw": DATA_DIR / "raw" / "bangladesh",
+    "Bangladesh BBox External": BANGLADESH_BBOX_EXTERNAL_DIR,
 }
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
@@ -15,7 +27,8 @@ def count_images(folder_path):
     return sum(
         1
         for file_path in folder_path.rglob("*")
-        if file_path.suffix.lower() in IMAGE_EXTENSIONS
+        if file_path.is_file()
+        and file_path.suffix.lower() in IMAGE_EXTENSIONS
     )
 
 

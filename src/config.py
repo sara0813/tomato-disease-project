@@ -43,6 +43,8 @@ MODEL_PATHS = {
 RESULT_DIR = PROJECT_ROOT / "results"
 
 COMMON_RESULT_DIR = RESULT_DIR / "_common"
+SUMMARY_RESULT_DIR = RESULT_DIR / "summary"
+
 CLASS_NAMES_PATH = COMMON_RESULT_DIR / "class_names.json"
 
 RESULT_PATHS = {
@@ -87,17 +89,21 @@ NUM_CLASSES = 10
 # Directory creation helper
 # ============================================================
 def ensure_dirs():
+    # Model directories
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     (MODEL_DIR / "imbalance").mkdir(parents=True, exist_ok=True)
 
+    # Result directories
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
     COMMON_RESULT_DIR.mkdir(parents=True, exist_ok=True)
+    SUMMARY_RESULT_DIR.mkdir(parents=True, exist_ok=True)
+    IMBALANCE_RESULT_DIR.mkdir(parents=True, exist_ok=True)
+    CORRUPTION_RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Model-specific result directories
     for path in RESULT_PATHS.values():
         path.mkdir(parents=True, exist_ok=True)
 
+    # External test result directories
     for path in EXTERNAL_RESULT_PATHS.values():
         path.mkdir(parents=True, exist_ok=True)
-
-    IMBALANCE_RESULT_DIR.mkdir(parents=True, exist_ok=True)
-    CORRUPTION_RESULT_DIR.mkdir(parents=True, exist_ok=True)

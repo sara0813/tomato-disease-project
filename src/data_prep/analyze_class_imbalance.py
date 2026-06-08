@@ -1,5 +1,13 @@
+from pathlib import Path
+import sys
+
 import pandas as pd
 import matplotlib.pyplot as plt
+
+SRC_DIR = Path(__file__).resolve().parents[1]
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from config import TRAIN_DIR, IMBALANCE_RESULT_DIR, ensure_dirs
 
@@ -51,15 +59,21 @@ def main():
 
     max_count = df["image_count"].max()
     min_count = df["image_count"].min()
-    imbalance_ratio = max_count / min_count
 
     print("\nImbalance Ratio")
-    print(f"Max / Min = {max_count} / {min_count} = {imbalance_ratio:.2f}")
+
+    if min_count == 0:
+        print(f"Max / Min = {max_count} / {min_count}")
+        print("[WARNING] Minimum class count is 0, so imbalance ratio cannot be calculated.")
+        imbalance_ratio = None
+    else:
+        imbalance_ratio = max_count / min_count
+        print(f"Max / Min = {max_count} / {min_count} = {imbalance_ratio:.2f}")
 
     csv_path = IMBALANCE_RESULT_DIR / "class_distribution_train.csv"
     png_path = IMBALANCE_RESULT_DIR / "class_distribution_train.png"
 
-    df.to_csv(csv_path, index=False)
+    df.to_csv(csv_path, index=False, encoding="utf-8-sig")
 
     plt.figure(figsize=(12, 6))
     plt.bar(df["class_name"], df["image_count"])

@@ -1,7 +1,16 @@
 import json
+from pathlib import Path
+import sys
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
+
+SRC_DIR = Path(__file__).resolve().parents[1]
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
 layers = tf.keras.layers
 
 from config import (
@@ -18,19 +27,20 @@ from config import (
     ensure_dirs,
 )
 
-from models import build_baseline_cnn
 
-MODEL_NAME = "baseline_cnn"
+MODEL_NAME = "mobilenetv2"
 MODEL_PATH = MODEL_PATHS[MODEL_NAME]
 MODEL_RESULT_DIR = RESULT_PATHS[MODEL_NAME]
 
-# 데이터 증강 레이어는 함수 밖에서 한 번만 생성해야 함
+
+# 데이터 증강 레이어는 함수 밖에서 한 번만 생성
 data_augmentation = tf.keras.Sequential([
     layers.RandomFlip("horizontal", seed=SEED),
     layers.RandomRotation(0.1, seed=SEED),
     layers.RandomZoom(0.1, seed=SEED),
     layers.RandomContrast(0.1, seed=SEED),
 ], name="data_augmentation")
+
 
 def load_datasets():
     train_ds = tf.keras.utils.image_dataset_from_directory(
@@ -62,23 +72,20 @@ def load_datasets():
 
     with open(CLASS_NAMES_PATH, "w", encoding="utf-8") as f:
         json.dump(class_names, f, ensure_ascii=False, indent=4)
-    
+
     return train_ds, val_ds, test_ds, class_names
 
 
 def preprocess_train(image, label):
-    image = tf.cast(image, tf.float32) / 255.0
-
+    image = tf.cast(image, tf.float32)
     image = data_augmentation(image, training=True)
-
-    image = tf.image.random_brightness(image, max_delta=0.1)
-    image = tf.clip_by_value(image, 0.0, 1.0)
-
+    image = tf.keras.applications.mobilenet_v2.preprocess_input(image)
     return image, label
 
 
 def preprocess_eval(image, label):
-    image = tf.cast(image, tf.float32) / 255.0
+    image = tf.cast(image, tf.float32)
+    image = tf.keras.applications.mobilenet_v2.preprocess_input(image)
     return image, label
 
 
@@ -89,28 +96,53 @@ def optimize_dataset(train_ds, val_ds, test_ds):
     val_ds = val_ds.map(preprocess_eval, num_parallel_calls=autotune)
     test_ds = test_ds.map(preprocess_eval, num_parallel_calls=autotune)
 
-    # train_ds에는 cache를 쓰지 않는 것이 좋음
-    # 이유: 데이터 증강 결과가 고정될 수 있고, 메모리도 많이 사용할 수 있음
     train_ds = train_ds.prefetch(buffer_size=autotune)
-
     val_ds = val_ds.cache().prefetch(buffer_size=autotune)
     test_ds = test_ds.cache().prefetch(buffer_size=autotune)
 
     return train_ds, val_ds, test_ds
 
 
+def build_mobilenetv2(num_classes):
+    base_model = tf.keras.applications.MobileNetV2(
+        include_top=False,
+        weights="imagenet",
+        input_shape=(IMG_SIZE[0], IMG_SIZE[1], 3)
+    )
+
+    base_model.trainable = False
+
+    inputs = tf.keras.Input(shape=(IMG_SIZE[0], IMG_SIZE[1], 3))
+    x = base_model(inputs, training=False)
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dropout(0.3)(x)
+    x = layers.Dense(256, activation="relu")(x)
+    x = layers.Dropout(0.3)(x)
+    outputs = layers.Dense(num_classes, activation="softmax")(x)
+
+    model = tf.keras.Model(inputs, outputs, name="MobileNetV2_Tomato")
+
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+        loss="categorical_crossentropy",
+        metrics=["accuracy"]
+    )
+
+    return model
+
+
 def plot_history(history):
     history_df = pd.DataFrame(history.history)
-    history_df.to_csv(MODEL_RESULT_DIR / "baseline_cnn_history.csv", index=False)
-    
+    history_df.to_csv(MODEL_RESULT_DIR / f"{MODEL_NAME}_history.csv", index=False)
+
     plt.figure()
     plt.plot(history.history["accuracy"], label="Train Accuracy")
     plt.plot(history.history["val_accuracy"], label="Validation Accuracy")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
-    plt.title("Baseline CNN Accuracy")
+    plt.title("MobileNetV2 Accuracy")
     plt.legend()
-    plt.savefig(MODEL_RESULT_DIR / "baseline_cnn_accuracy.png")
+    plt.savefig(MODEL_RESULT_DIR / f"{MODEL_NAME}_accuracy.png")
     plt.close()
 
     plt.figure()
@@ -118,9 +150,9 @@ def plot_history(history):
     plt.plot(history.history["val_loss"], label="Validation Loss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.title("Baseline CNN Loss")
+    plt.title("MobileNetV2 Loss")
     plt.legend()
-    plt.savefig(MODEL_RESULT_DIR / "baseline_cnn_loss.png")
+    plt.savefig(MODEL_RESULT_DIR / f"{MODEL_NAME}_loss.png")
     plt.close()
 
 
@@ -130,7 +162,7 @@ def main():
     if not TRAIN_DIR.exists() or not VAL_DIR.exists() or not TEST_DIR.exists():
         print("Processed dataset folders do not exist.")
         print("Run this first:")
-        print("python src\\split_dataset.py")
+        print("python src\\data_prep\\split_dataset.py")
         return
 
     train_ds, val_ds, test_ds, class_names = load_datasets()
@@ -140,17 +172,15 @@ def main():
 
     print("Class names:", class_names)
     print("Number of classes:", num_classes)
+    print("Experiment:", MODEL_NAME)
 
-    model = build_baseline_cnn(
-        input_shape=(IMG_SIZE[0], IMG_SIZE[1], 3),
-        num_classes=num_classes
-    )
+    model = build_mobilenetv2(num_classes=num_classes)
 
     model.summary()
 
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(
-            filepath=MODEL_PATH,
+            filepath=str(MODEL_PATH),
             monitor="val_accuracy",
             save_best_only=True,
             verbose=1
@@ -175,18 +205,25 @@ def main():
         callbacks=callbacks
     )
 
+    # EarlyStopping으로 복원된 best weight를 다시 저장
+    model.save(str(MODEL_PATH))
+
     plot_history(history)
 
     test_loss, test_accuracy = model.evaluate(test_ds)
 
     print("-" * 50)
-    print(f"Test Loss: {test_loss:.4f}")
-    print(f"Test Accuracy: {test_accuracy:.4f}")
+    print(f"Experiment: {MODEL_NAME}")
+    print(f"MobileNetV2 Test Loss: {test_loss:.4f}")
+    print(f"MobileNetV2 Test Accuracy: {test_accuracy:.4f}")
+    print(f"Model saved to: {MODEL_PATH}")
     print("-" * 50)
 
-    with open(MODEL_RESULT_DIR / "baseline_cnn_test_result.txt", "w", encoding="utf-8") as f:
-        f.write(f"Test Loss: {test_loss:.4f}\n")
-        f.write(f"Test Accuracy: {test_accuracy:.4f}\n")
+    with open(MODEL_RESULT_DIR / f"{MODEL_NAME}_test_result.txt", "w", encoding="utf-8") as f:
+        f.write(f"Experiment: {MODEL_NAME}\n")
+        f.write(f"MobileNetV2 Test Loss: {test_loss:.4f}\n")
+        f.write(f"MobileNetV2 Test Accuracy: {test_accuracy:.4f}\n")
+        f.write(f"Model saved to: {MODEL_PATH}\n")
 
 
 if __name__ == "__main__":

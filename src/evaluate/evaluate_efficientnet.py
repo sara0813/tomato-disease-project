@@ -1,9 +1,22 @@
 import json
+from pathlib import Path
+import sys
+
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+    accuracy_score
+)
+
+SRC_DIR = Path(__file__).resolve().parents[1]
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from config import (
     TEST_DIR,
@@ -16,7 +29,11 @@ from config import (
 )
 
 
-MODEL_NAME = "densenet121"
+# ============================================================
+# Experiment Setting
+# ============================================================
+
+MODEL_NAME = "efficientnetb0"
 MODEL_PATH = MODEL_PATHS[MODEL_NAME]
 MODEL_RESULT_DIR = RESULT_PATHS[MODEL_NAME]
 
@@ -47,7 +64,9 @@ def load_test_dataset():
 
     test_ds = test_ds.map(
         lambda image, label: (
-            tf.keras.applications.densenet.preprocess_input(tf.cast(image, tf.float32)),
+            tf.keras.applications.efficientnet.preprocess_input(
+                tf.cast(image, tf.float32)
+            ),
             label
         ),
         num_parallel_calls=tf.data.AUTOTUNE
@@ -78,7 +97,7 @@ def save_confusion_matrix(y_true, y_pred, class_names):
         colorbar=True
     )
 
-    ax.set_title("DenseNet121 Confusion Matrix", fontsize=16)
+    ax.set_title("EfficientNetB0 Confusion Matrix", fontsize=16)
     ax.set_xlabel("Predicted label", fontsize=12)
     ax.set_ylabel("True label", fontsize=12)
 
@@ -91,6 +110,8 @@ def save_confusion_matrix(y_true, y_pred, class_names):
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
+    print(f"Confusion matrix saved to: {save_path}")
+
 
 def main():
     ensure_dirs()
@@ -98,16 +119,17 @@ def main():
     if not TEST_DIR.exists():
         print("Test dataset folder does not exist.")
         print("Run this first:")
-        print("python src\\split_dataset.py")
+        print("python src\\data_prep\\split_dataset.py")
         return
 
     if not MODEL_PATH.exists():
         print("Model file does not exist.")
+        print(f"Missing model path: {MODEL_PATH}")
         print("Run this first:")
-        print("python src\\train_densenet.py")
+        print("python src\\train\\train_efficientnet.py")
         return
 
-    model = tf.keras.models.load_model(MODEL_PATH)
+    model = tf.keras.models.load_model(str(MODEL_PATH))
     test_ds, class_names = load_test_dataset()
 
     y_true = []
@@ -119,6 +141,8 @@ def main():
         y_true.extend(np.argmax(labels.numpy(), axis=1))
         y_pred.extend(np.argmax(predictions, axis=1))
 
+    test_accuracy = accuracy_score(y_true, y_pred)
+
     report = classification_report(
         y_true,
         y_pred,
@@ -127,23 +151,35 @@ def main():
         zero_division=0
     )
 
+    print("\n" + "=" * 60)
+    print(f"Experiment: {MODEL_NAME}")
+    print(f"Test Accuracy: {test_accuracy:.4f}")
+    print("=" * 60)
     print(report)
 
-    with open(
-        MODEL_RESULT_DIR / f"{MODEL_NAME}_classification_report.txt",
-        "w",
-        encoding="utf-8"
-    ) as f:
+    report_path = MODEL_RESULT_DIR / f"{MODEL_NAME}_classification_report.txt"
+
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.write(f"Experiment: {MODEL_NAME}\n")
+        f.write(f"Model path: {MODEL_PATH}\n")
+        f.write(f"Test Accuracy: {test_accuracy:.4f}\n\n")
         f.write(report)
+
+    result_path = MODEL_RESULT_DIR / f"{MODEL_NAME}_test_result.txt"
+
+    with open(result_path, "w", encoding="utf-8") as f:
+        f.write(f"Experiment: {MODEL_NAME}\n")
+        f.write(f"Model path: {MODEL_PATH}\n")
+        f.write(f"Test Accuracy: {test_accuracy:.4f}\n")
 
     with open(CLASS_NAMES_PATH, "w", encoding="utf-8") as f:
         json.dump(class_names, f, ensure_ascii=False, indent=4)
 
     save_confusion_matrix(y_true, y_pred, class_names)
 
-    print("DenseNet121 evaluation completed!")
-    print(f"Report saved to: {MODEL_RESULT_DIR / f'{MODEL_NAME}_classification_report.txt'}")
-    print(f"Confusion matrix saved to: {MODEL_RESULT_DIR / f'{MODEL_NAME}_confusion_matrix.png'}")
+    print("\nEfficientNetB0 evaluation completed!")
+    print(f"Report saved to: {report_path}")
+    print(f"Result saved to: {result_path}")
 
 
 if __name__ == "__main__":

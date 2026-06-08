@@ -1,3 +1,4 @@
+from pathlib import Path
 import sys
 from collections import Counter
 
@@ -6,6 +7,11 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+
+SRC_DIR = Path(__file__).resolve().parents[1]
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from config import (
     BANGLADESH_BBOX_EXTERNAL_DIR,
@@ -73,7 +79,7 @@ def load_external_dataset(preprocess):
     if not BANGLADESH_BBOX_EXTERNAL_DIR.exists():
         print(f"[ERROR] Bangladesh bbox external dataset does not exist: {BANGLADESH_BBOX_EXTERNAL_DIR}")
         print("Run this first:")
-        print("python src\\convert_bangladesh_bbox_crop.py")
+        print("python src\\data_prep\\convert_bangladesh_bbox_crop.py")
         sys.exit(1)
 
     ds = tf.keras.utils.image_dataset_from_directory(
@@ -163,7 +169,7 @@ def evaluate_model(model_name):
     print(f"Bangladesh BBox External Test - {model_name}")
     print("=" * 80)
 
-    model = tf.keras.models.load_model(model_path)
+    model = tf.keras.models.load_model(str(model_path))
     test_ds = load_external_dataset(config["preprocess"])
 
     y_true = []
@@ -206,6 +212,7 @@ def evaluate_model(model_name):
         f.write("Classification Report:\n")
         f.write(report)
         f.write("\n\nPrediction Distribution:\n")
+
         for idx, class_name in enumerate(PLANTVILLAGE_CLASSES):
             f.write(f"{class_name}: {pred_counter[idx]}\n")
 
@@ -218,11 +225,11 @@ def main():
 
     if len(sys.argv) < 2:
         print("Usage:")
-        print("python src\\evaluate_bangladesh_bbox_external.py efficientnetb0")
-        print("python src\\evaluate_bangladesh_bbox_external.py mobilenetv2")
-        print("python src\\evaluate_bangladesh_bbox_external.py baseline")
-        print("python src\\evaluate_bangladesh_bbox_external.py densenet121")
-        print("python src\\evaluate_bangladesh_bbox_external.py efficientnetb0_classweight")
+        print("python src\\evaluate\\evaluate_bangladesh_bbox_external.py efficientnetb0")
+        print("python src\\evaluate\\evaluate_bangladesh_bbox_external.py mobilenetv2")
+        print("python src\\evaluate\\evaluate_bangladesh_bbox_external.py baseline")
+        print("python src\\evaluate\\evaluate_bangladesh_bbox_external.py densenet121")
+        print("python src\\evaluate\\evaluate_bangladesh_bbox_external.py efficientnetb0_classweight")
         sys.exit(1)
 
     model_name = sys.argv[1].lower()

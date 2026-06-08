@@ -1,4 +1,7 @@
 import json
+from pathlib import Path
+import sys
+
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -9,6 +12,11 @@ from sklearn.metrics import (
     ConfusionMatrixDisplay,
     accuracy_score
 )
+
+SRC_DIR = Path(__file__).resolve().parents[1]
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from config import (
     TEST_DIR,
@@ -111,17 +119,17 @@ def main():
     if not TEST_DIR.exists():
         print("Test dataset folder does not exist.")
         print("Run this first:")
-        print("python src\\split_dataset.py")
+        print("python src\\data_prep\\split_dataset.py")
         return
 
     if not MODEL_PATH.exists():
         print("Model file does not exist.")
         print(f"Missing model path: {MODEL_PATH}")
         print("Run this first:")
-        print("python src\\train_efficientnet.py")
+        print("python src\\train\\train_efficientnet_classweight.py")
         return
 
-    model = tf.keras.models.load_model(MODEL_PATH)
+    model = tf.keras.models.load_model(str(MODEL_PATH))
     test_ds, class_names = load_test_dataset()
 
     y_true = []

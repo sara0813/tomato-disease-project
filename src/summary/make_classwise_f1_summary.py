@@ -2,8 +2,14 @@ from pathlib import Path
 import re
 import csv
 import json
+import sys
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = SRC_DIR.parent
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
 RESULTS_DIR = PROJECT_ROOT / "results"
 SUMMARY_DIR = RESULTS_DIR / "summary"
 SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
